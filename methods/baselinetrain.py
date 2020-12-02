@@ -10,7 +10,7 @@ from model_resnet import *
 from resnet_pytorch import *
 
 class BaselineTrain(nn.Module):
-    def __init__(self, model_func, num_class, loss_type = 'softmax', jigsaw=False, lbda=0.0, rotation=False, tracking=True, pretrain=False):
+    def __init__(self, model_func, num_class, loss_type = 'softmax', jigsaw=False, lbda=0.0, rotation=False, ortho_loss=False, ortho_factor=1, tracking=True, pretrain=False):
         super(BaselineTrain, self).__init__()
         self.jigsaw = jigsaw
         self.lbda = lbda
@@ -19,6 +19,8 @@ class BaselineTrain(nn.Module):
         print('tracking in baseline train:',tracking)
         self.pretrain = pretrain
         print("USE pre-trained model:",pretrain)
+        self.ortho_loss = ortho_loss
+        self.ortho_factor = ortho_factor
 
         if isinstance(model_func,str):
             if model_func == 'resnet18':
@@ -166,6 +168,16 @@ class BaselineTrain(nn.Module):
                     writer.add_scalar('train/loss_rotation', float(loss_rotation), self.global_count)
                 else:
                     loss, acc = self.forward_loss(x,y)
+
+                if self.ortho_loss == "weights":
+                    ortho_loss = 0
+                    for param in self.parameters():
+                        ortho_loss += ((torch.matmul(param, param.T) - torch.eye(param.shape[0]))**2).sum()
+                    ortho_loss = ortho_loss*self.ortho_factor
+                    loss += ortho_loss
+
+                    writer.add_scalar('train/loss_ortho', float(ortho_loss), self.global_count)
+
                 writer.add_scalar('train/loss', float(loss.data.item()), self.global_count)
                 loss.backward()
                 optimizer.step()
@@ -220,6 +232,17 @@ class BaselineTrain(nn.Module):
                     writer.add_scalar('train/loss_rotation', float(loss_rotation), self.global_count)
                 else:
                     loss, acc = self.forward_loss(x,y)
+
+
+                if self.ortho_loss == "weights":
+                    ortho_loss = 0
+                    for param in self.parameters():
+                        ortho_loss += ((torch.matmul(param, param.T) - torch.eye(param.shape[0]))**2).sum()
+                    ortho_loss = ortho_loss*self.ortho_factor
+                    loss += ortho_loss
+
+                    writer.add_scalar('train/loss_ortho', float(ortho_loss), self.global_count)
+
                 writer.add_scalar('train/loss', float(loss.data.item()), self.global_count)
                 loss.backward()
                 optimizer.step()

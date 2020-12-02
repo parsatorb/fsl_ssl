@@ -11,9 +11,11 @@ from model_resnet import *
 from itertools import cycle
 
 class ProtoNet(MetaTemplate):
-    def __init__(self, model_func,  n_way, n_support, jigsaw=False, lbda=0.0, rotation=False, tracking=False, use_bn=True, pretrain=False):
+    def __init__(self, model_func,  n_way, n_support, jigsaw=False, lbda=0.0, rotation=False, ortho_loss=False, ortho_factor=1, tracking=False, use_bn=True, pretrain=False):
         super(ProtoNet, self).__init__(model_func,  n_way, n_support, use_bn, pretrain)
         self.loss_fn = nn.CrossEntropyLoss()
+        self.ortho_loss = ortho_loss
+        self.ortho_factor = ortho_factor
 
         self.jigsaw = jigsaw
         self.rotation = rotation
@@ -76,6 +78,16 @@ class ProtoNet(MetaTemplate):
                     writer.add_scalar('train/loss_rotation', float(loss_rotation.data.item()), self.global_count)
                 else:
                     loss = loss_proto
+
+                if self.ortho_loss == "weights":
+                    ortho_loss = 0
+                    for param in self.parameters():
+                        ortho_loss += ((torch.matmul(param, param.T) - torch.eye(param.shape[0]))**2).sum()
+                    ortho_loss = ortho_loss*self.ortho_factor
+                    loss += ortho_loss
+
+                    writer.add_scalar('train/loss_ortho', float(ortho_loss), self.global_count)
+
                 loss.backward()
                 optimizer.step()
                 avg_loss = avg_loss+loss.data
@@ -122,6 +134,16 @@ class ProtoNet(MetaTemplate):
                     writer.add_scalar('train/loss_rotation', float(loss_rotation.data.item()), self.global_count)
                 else:
                     loss = loss_proto
+
+                if self.ortho_loss == "weights":
+                    ortho_loss = 0
+                    for param in self.parameters():
+                        ortho_loss += ((torch.matmul(param, param.T) - torch.eye(param.shape[0]))**2).sum()
+                    ortho_loss = ortho_loss*self.ortho_factor
+                    loss += ortho_loss
+
+                    writer.add_scalar('train/loss_ortho', float(ortho_loss), self.global_count)
+
                 loss.backward()
                 optimizer.step()
                 avg_loss = avg_loss+loss.item()
