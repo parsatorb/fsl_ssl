@@ -117,7 +117,7 @@ if __name__=='__main__':
         val_loader              = val_datamgr.get_data_loader( val_file, aug = False) 
 
         if params.method == 'protonet':
-            model           = ProtoNet( model_dict[params.model], **train_few_shot_params, use_bn=(not params.no_bn), pretrain=params.pretrain)
+            model           = ProtoNet( model_dict[params.model], ortho_loss=params.ortho_loss, ortho_factor=params.ortho_factor, **train_few_shot_params, use_bn=(not params.no_bn), pretrain=params.pretrain)
         elif params.method == 'matchingnet':
             model           = MatchingNet( model_dict[params.model], **train_few_shot_params )
         elif params.method in ['relationnet', 'relationnet_softmax']:

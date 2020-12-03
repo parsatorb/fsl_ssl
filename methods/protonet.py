@@ -81,12 +81,16 @@ class ProtoNet(MetaTemplate):
 
                 if self.ortho_loss == "weights":
                     ortho_loss = 0
-                    for param in self.parameters():
-                        ortho_loss += ((torch.matmul(param, param.T) - torch.eye(param.shape[0]))**2).sum()
-                    ortho_loss = ortho_loss*self.ortho_factor
-                    loss += ortho_loss
-
-                    writer.add_scalar('train/loss_ortho', float(ortho_loss), self.global_count)
+                    for name, wparam in self.named_parameters():
+                        if 'weight' in name and wparam.requires_grad and len(wparam.shape)==4:
+                            N, C, H, W = wparam.shape
+                            weight = wparam.view(N * C, H, W)
+                            weight_squared = torch.bmm(weight, weight.permute(0, 2, 1)) # (N * C) * W * H
+                            #ones_mask = torch.ones(N * C, W, H, dtype=torch.float32) # (N * C) * W * H
+                            diag = torch.eye(H, dtype=torch.float32).cuda() # to be broadcast per channel
+                            ortho_loss += torch.abs(weight_squared - diag).sum()
+                
+                ortho_loss = ortho_loss*self.ortho_factor
 
                 loss.backward()
                 optimizer.step()
@@ -137,8 +141,15 @@ class ProtoNet(MetaTemplate):
 
                 if self.ortho_loss == "weights":
                     ortho_loss = 0
-                    for param in self.parameters():
-                        ortho_loss += ((torch.matmul(param, param.T) - torch.eye(param.shape[0]))**2).sum()
+                    for name, wparam in self.named_parameters():
+                        if 'weight' in name and wparam.requires_grad and len(wparam.shape)==4:
+                            N, C, H, W = wparam.shape
+                            weight = wparam.view(N * C, H, W)
+                            weight_squared = torch.bmm(weight, weight.permute(0, 2, 1)) # (N * C) * W * H
+                            #ones_mask = torch.ones(N * C, W, H, dtype=torch.float32) # (N * C) * W * H
+                            diag = torch.eye(H, dtype=torch.float32).cuda() # to be broadcast per channel
+                            ortho_loss += torch.abs(weight_squared - diag).sum()
+                    
                     ortho_loss = ortho_loss*self.ortho_factor
                     loss += ortho_loss
 
