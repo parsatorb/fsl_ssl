@@ -148,6 +148,9 @@ class BaselineTrain(nn.Module):
         avg_acc_jigsaw=0
         avg_acc_rotation=0
 
+        if self.ortho_loss == "closest":
+            closest_ortho_regularizer(self, writer, epoch)
+
         if base_loader_u is not None:
             for i,inputs in enumerate(zip(train_loader,base_loader_u)):
                 self.global_count += 1
@@ -169,14 +172,7 @@ class BaselineTrain(nn.Module):
                 else:
                     loss, acc = self.forward_loss(x,y)
 
-                if self.ortho_loss == "weights":
-                    ortho_loss = 0
-                    for param in self.parameters():
-                        ortho_loss += ((torch.matmul(param, param.T) - torch.eye(param.shape[0]))**2).sum()
-                    ortho_loss = ortho_loss*self.ortho_factor
-                    loss += ortho_loss
-
-                    writer.add_scalar('train/loss_ortho', float(ortho_loss), self.global_count)
+                loss += loss_ortho_regularizer(self.ortho_loss, self.loss_factor, self, writer, global_count)
 
                 writer.add_scalar('train/loss', float(loss.data.item()), self.global_count)
                 loss.backward()
@@ -234,14 +230,7 @@ class BaselineTrain(nn.Module):
                     loss, acc = self.forward_loss(x,y)
 
 
-                if self.ortho_loss == "weights":
-                    ortho_loss = 0
-                    for param in self.parameters():
-                        ortho_loss += ((torch.matmul(param, param.T) - torch.eye(param.shape[0]))**2).sum()
-                    ortho_loss = ortho_loss*self.ortho_factor
-                    loss += ortho_loss
-
-                    writer.add_scalar('train/loss_ortho', float(ortho_loss), self.global_count)
+                loss += loss_ortho_regularizer(self.ortho_loss, self.loss_factor, self, writer, global_count)
 
                 writer.add_scalar('train/loss', float(loss.data.item()), self.global_count)
                 loss.backward()

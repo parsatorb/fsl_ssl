@@ -10,7 +10,7 @@ from methods.meta_template import MetaTemplate
 
 class MAML(MetaTemplate):
     def __init__(self, model_func,  n_way, n_support, approx = False, jigsaw=False, \
-                lbda=0.0, rotation=False, tracking=False, use_bn=True, pretrain=False):
+                lbda=0.0, rotation=False, tracking=False, use_bn=True, pretrain=False, ortho_loss=False, ortho_factor=1):
         super(MAML, self).__init__(model_func, n_way, n_support, use_bn, pretrain, change_way = False)
 
         self.loss_fn = nn.CrossEntropyLoss()
@@ -20,7 +20,10 @@ class MAML(MetaTemplate):
         self.n_task     = 4
         self.task_update_num = 5
         self.train_lr = 0.01
-        self.approx = approx #first order approx.    
+        self.approx = approx #first order approx.
+        
+        self.ortho_loss = ortho_loss
+        self.ortho_factor = ortho_factor
 
         self.global_count = 0
         self.jigsaw = jigsaw
@@ -177,6 +180,9 @@ class MAML(MetaTemplate):
         loss_all = []
         optimizer.zero_grad()
 
+        if self.ortho_loss == "closest":
+            closest_ortho_regularizer(self, writer, epoch)
+
         #train
         for i, inputs in enumerate(train_loader):
             self.global_count += 1
@@ -209,6 +215,7 @@ class MAML(MetaTemplate):
 
             if task_count == self.n_task:
                 loss_q = torch.stack(loss_all).sum(0)
+                loss_q += loss_ortho_regularizer(self.ortho_loss, self.loss_factor, self, writer, global_count)
                 writer.add_scalar('train/loss', float(loss_q.data.item()), self.global_count//self.n_task)
                 loss_q.backward()
 
