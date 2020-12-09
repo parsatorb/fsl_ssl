@@ -139,16 +139,16 @@ class ProtoNet(MetaTemplate):
                 else:
                     loss = loss_proto
 
-                if self.ortho_loss == "weights":
+                if self.ortho_loss == "weights_normal":
                     ortho_loss = 0
                     for name, wparam in self.named_parameters():
                         if 'weight' in name and wparam.requires_grad and len(wparam.shape)==4:
                             N, C, H, W = wparam.shape
                             weight = wparam.view(N * C, H, W)
                             weight_squared = torch.bmm(weight, weight.permute(0, 2, 1)) # (N * C) * W * H
-                            #ones_mask = torch.ones(N * C, W, H, dtype=torch.float32) # (N * C) * W * H
+                            ones_mask = torch.ones(N * C, W, H, dtype=torch.float32).cuda() # (N * C) * W * H
                             diag = torch.eye(H, dtype=torch.float32).cuda() # to be broadcast per channel
-                            ortho_loss += torch.abs(weight_squared - diag).sum()
+                            ortho_loss += torch.abs(weight_squared*(ones_mask-diag)).sum()
                     
                     ortho_loss = ortho_loss*self.ortho_factor
                     loss += ortho_loss
