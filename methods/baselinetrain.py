@@ -8,6 +8,7 @@ import numpy as np
 import torch.nn.functional as F
 from model_resnet import *
 from resnet_pytorch import *
+from methods.method_utils import *
 
 class BaselineTrain(nn.Module):
     def __init__(self, model_func, num_class, loss_type = 'softmax', jigsaw=False, lbda=0.0, rotation=False, ortho_loss=False, ortho_factor=1, tracking=True, pretrain=False):
@@ -21,6 +22,7 @@ class BaselineTrain(nn.Module):
         print("USE pre-trained model:",pretrain)
         self.ortho_loss = ortho_loss
         self.ortho_factor = ortho_factor
+        self.loss_factor = ortho_loss
 
         if isinstance(model_func,str):
             if model_func == 'resnet18':

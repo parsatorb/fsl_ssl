@@ -2,7 +2,7 @@ import torch
 
 def closest_ortho_regularizer(model, writer, global_count):
     old_device = next(model.parameters()).device
-    model = model.to("cpu") #SVD is much faster on CPU
+    model.to("cpu") #SVD is much faster on CPU
     total_diff = 0
     with torch.no_grad():
         for name, param in model.named_parameters():
@@ -13,7 +13,7 @@ def closest_ortho_regularizer(model, writer, global_count):
                 total_diff += abs(param-pparam).sum()
 
     writer.add_scalar('train/loss_ortho', float(total_diff), global_count)
-    model.to_old(old_device)
+    model.to(old_device)
 
 def loss_ortho_regularizer(loss_type, loss_factor, model, writer, global_count):
     ortho_loss = 0

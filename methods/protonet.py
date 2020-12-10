@@ -8,6 +8,7 @@ import numpy as np
 import torch.nn.functional as F
 from methods.meta_template import MetaTemplate
 from model_resnet import *
+from methods.method_utils import *
 from itertools import cycle
 
 class ProtoNet(MetaTemplate):
@@ -16,6 +17,7 @@ class ProtoNet(MetaTemplate):
         self.loss_fn = nn.CrossEntropyLoss()
         self.ortho_loss = ortho_loss
         self.ortho_factor = ortho_factor
+        self.loss_factor = ortho_loss
 
         self.jigsaw = jigsaw
         self.rotation = rotation

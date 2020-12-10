@@ -7,6 +7,7 @@ from torch.autograd import Variable
 import numpy as np
 import torch.nn.functional as F
 from methods.meta_template import MetaTemplate
+from methods.method_utils import *
 
 class MAML(MetaTemplate):
     def __init__(self, model_func,  n_way, n_support, approx = False, jigsaw=False, \
@@ -24,6 +25,7 @@ class MAML(MetaTemplate):
         
         self.ortho_loss = ortho_loss
         self.ortho_factor = ortho_factor
+        self.loss_factor = ortho_factor
 
         self.global_count = 0
         self.jigsaw = jigsaw
