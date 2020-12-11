@@ -288,7 +288,7 @@ class BaselineTrain(nn.Module):
                 elif self.rotation:
                     loss_proto, loss_rotation, acc, acc_rotation = self.forward_loss(x, y, inputs[2], inputs[3])
                     loss = (1.0-self.lbda) * loss_proto + self.lbda * loss_rotation
-                    num_correct_jigsaw = int(acc_jigsaw*len(inputs[3]))
+                    num_correct_jigsaw = int(acc_rotation*len(inputs[3]))
                     num_total_jigsaw += len(inputs[3].view(-1))
                 else:
                     loss, acc = self.forward_loss(x,y)
