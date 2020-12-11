@@ -17,7 +17,7 @@ class ProtoNet(MetaTemplate):
         self.loss_fn = nn.CrossEntropyLoss()
         self.ortho_loss = ortho_loss
         self.ortho_factor = ortho_factor
-        self.loss_factor = ortho_loss
+        self.loss_factor = ortho_factor
 
         self.jigsaw = jigsaw
         self.rotation = rotation
@@ -84,7 +84,7 @@ class ProtoNet(MetaTemplate):
                 else:
                     loss = loss_proto
 
-                loss += loss_ortho_regularizer(self.ortho_loss, self.loss_factor, self, writer, global_count)
+                loss += loss_ortho_regularizer(self.ortho_loss, self.loss_factor, self, writer, self.global_count)
 
                 loss.backward()
                 optimizer.step()

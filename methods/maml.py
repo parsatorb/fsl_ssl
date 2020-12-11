@@ -24,8 +24,8 @@ class MAML(MetaTemplate):
         self.approx = approx #first order approx.
         
         self.ortho_loss = ortho_loss
-        self.ortho_factor = ortho_factor
         self.loss_factor = ortho_factor
+        self.ortho_factor = ortho_factor
 
         self.global_count = 0
         self.jigsaw = jigsaw
@@ -217,7 +217,7 @@ class MAML(MetaTemplate):
 
             if task_count == self.n_task:
                 loss_q = torch.stack(loss_all).sum(0)
-                loss_q += loss_ortho_regularizer(self.ortho_loss, self.loss_factor, self, writer, global_count)
+                loss_q += loss_ortho_regularizer(self.ortho_loss, self.loss_factor, self, writer, self.global_count)
                 writer.add_scalar('train/loss', float(loss_q.data.item()), self.global_count//self.n_task)
                 loss_q.backward()
 

@@ -20,9 +20,10 @@ class BaselineTrain(nn.Module):
         print('tracking in baseline train:',tracking)
         self.pretrain = pretrain
         print("USE pre-trained model:",pretrain)
+
         self.ortho_loss = ortho_loss
         self.ortho_factor = ortho_factor
-        self.loss_factor = ortho_loss
+        self.loss_factor = ortho_factor
 
         if isinstance(model_func,str):
             if model_func == 'resnet18':
@@ -174,7 +175,7 @@ class BaselineTrain(nn.Module):
                 else:
                     loss, acc = self.forward_loss(x,y)
 
-                loss += loss_ortho_regularizer(self.ortho_loss, self.loss_factor, self, writer, global_count)
+                loss += loss_ortho_regularizer(self.ortho_loss, self.loss_factor, self, writer, self.global_count)
 
                 writer.add_scalar('train/loss', float(loss.data.item()), self.global_count)
                 loss.backward()
@@ -232,7 +233,7 @@ class BaselineTrain(nn.Module):
                     loss, acc = self.forward_loss(x,y)
 
 
-                loss += loss_ortho_regularizer(self.ortho_loss, self.loss_factor, self, writer, global_count)
+                loss += loss_ortho_regularizer(self.ortho_loss, self.loss_factor, self, writer, self.global_count)
 
                 writer.add_scalar('train/loss', float(loss.data.item()), self.global_count)
                 loss.backward()
