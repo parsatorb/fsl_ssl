@@ -7,13 +7,12 @@ import torch.optim.lr_scheduler as lr_scheduler
 import time
 import os
 import glob
+
 import backbone
-import copy
-import random
 from data.datamgr import SimpleDataManager, SetDataManager
 from methods.baselinetrain import BaselineTrain
 from methods.baselinefinetune import BaselineFinetune
-from methods.protonet import ProtoNet
+from methods.protonet_ortho import ProtoNet
 from methods.matchingnet import MatchingNet
 from methods.relationnet import RelationNet
 from methods.maml import MAML
@@ -21,8 +20,6 @@ from io_utils import model_dict, parse_args, get_resume_file, get_best_file, get
 from tensorboardX import SummaryWriter
 import json
 from model_resnet import *
-from utils import (AverageMeter, Logger, Memory, ModelCheckpoint,
-                   NoiseContrastiveEstimator, Progbar, pil_loader, JigsawDataset)
 
 def train(base_loader, val_loader, model, start_epoch, stop_epoch, params):    
     if params.optimization == 'Adam':
@@ -44,22 +41,17 @@ def train(base_loader, val_loader, model, start_epoch, stop_epoch, params):
         if not os.path.isdir(params.checkpoint_dir):
             os.makedirs(params.checkpoint_dir)
 
-        #if params.jigsaw:
-        #    acc, acc_jigsaw = model.test_loop( val_loader)
-        #    writer.add_scalar('val/acc', acc, epoch)
-        #    writer.add_scalar('val/acc_jigsaw', acc_jigsaw, epoch)
-        #elif params.rotation:
-        #    acc, acc_rotation = model.test_loop( val_loader)
-        #    writer.add_scalar('val/acc', acc, epoch)
-        #    writer.add_scalar('val/acc_rotation', acc_rotation, epoch)
-        #else:    
-        #    acc = model.test_loop( val_loader)
-        #    writer.add_scalar('val/acc', acc, epoch)
-
-        acc = model.test_loop( val_loader)
-        writer.add_scalar('val/acc', acc, epoch)
-
-
+        if params.jigsaw:
+            acc, acc_jigsaw = model.test_loop( val_loader)
+            writer.add_scalar('val/acc', acc, epoch)
+            writer.add_scalar('val/acc_jigsaw', acc_jigsaw, epoch)
+        elif params.rotation:
+            acc, acc_rotation = model.test_loop( val_loader)
+            writer.add_scalar('val/acc', acc, epoch)
+            writer.add_scalar('val/acc_rotation', acc_rotation, epoch)
+        else:    
+            acc = model.test_loop( val_loader)
+            writer.add_scalar('val/acc', acc, epoch)
         if acc > max_acc : #for baseline and baseline++, we don't use validation here so we let acc = -1
             print("best model! save...")
             max_acc = acc
@@ -75,6 +67,7 @@ def train(base_loader, val_loader, model, start_epoch, stop_epoch, params):
 if __name__=='__main__':
     np.random.seed(10)
     params = parse_args('train')
+
     isAircraft = (params.dataset == 'aircrafts')    
         
     base_file = os.path.join('filelists', params.dataset, params.base+'.json')
@@ -82,65 +75,49 @@ if __name__=='__main__':
      
     image_size = params.image_size
 
-    #if params.method in ['baseline', 'baseline++'] :
-    #    base_datamgr    = SimpleDataManager(image_size, batch_size = params.bs, jigsaw=params.jigsaw, rotation=params.rotation, isAircraft=isAircraft)
-    #    base_loader     = base_datamgr.get_data_loader( base_file , aug = params.train_aug )
-    #    val_datamgr     = SimpleDataManager(image_size, batch_size = params.bs, jigsaw=params.jigsaw, rotation=params.rotation, isAircraft=isAircraft)
-    #    val_loader      = val_datamgr.get_data_loader( val_file, aug = False)
+    if params.method in ['baseline', 'baseline++'] :
+        base_datamgr    = SimpleDataManager(image_size, batch_size = params.bs, jigsaw=params.jigsaw, rotation=params.rotation, isAircraft=isAircraft)
+        base_loader     = base_datamgr.get_data_loader( base_file , aug = params.train_aug )
+        val_datamgr     = SimpleDataManager(image_size, batch_size = params.bs, jigsaw=params.jigsaw, rotation=params.rotation, isAircraft=isAircraft)
+        val_loader      = val_datamgr.get_data_loader( val_file, aug = False)
 
-    #    if params.dataset == 'CUB':
-    #        params.num_classes = 200
-    #    elif params.dataset == 'cars':
-    #        params.num_classes = 196
-    #    elif params.dataset == 'aircrafts':
-    #        params.num_classes = 100
-    #    elif params.dataset == 'dogs':
-    #        params.num_classes = 120
-    #    elif params.dataset == 'flowers':
-    #        params.num_classes = 102
-    #    elif params.dataset == 'miniImagenet':
-    #        params.num_classes = 100
-    #    elif params.dataset == 'tieredImagenet':
-    #        params.num_classes = 608
+        if params.dataset == 'CUB':
+            params.num_classes = 200
+        elif params.dataset == 'cars':
+            params.num_classes = 196
+        elif params.dataset == 'aircrafts':
+            params.num_classes = 100
+        elif params.dataset == 'dogs':
+            params.num_classes = 120
+        elif params.dataset == 'flowers':
+            params.num_classes = 102
+        elif params.dataset == 'miniImagenet':
+            params.num_classes = 100
+        elif params.dataset == 'tieredImagenet':
+            params.num_classes = 608
 
-    #    if params.method == 'baseline':
-    #        model           = BaselineTrain( model_dict[params.model], params.num_classes, \
-    #                                        jigsaw=params.jigsaw, lbda=params.lbda, rotation=params.rotation, tracking=params.tracking)
-    #    elif params.method == 'baseline++':
-    #        model           = BaselineTrain( model_dict[params.model], params.num_classes, \
-    #                                        loss_type = 'dist', jigsaw=params.jigsaw, lbda=params.lbda, rotation=params.rotation, tracking=params.tracking)
+        if params.method == 'baseline':
+            model           = BaselineTrain( model_dict[params.model], params.num_classes, \
+                                            jigsaw=params.jigsaw, lbda=params.lbda, rotation=params.rotation, tracking=params.tracking)
+        elif params.method == 'baseline++':
+            model           = BaselineTrain( model_dict[params.model], params.num_classes, \
+                                            loss_type = 'dist', jigsaw=params.jigsaw, lbda=params.lbda, rotation=params.rotation, tracking=params.tracking)
 
-    if params.method in ['protonet','matchingnet','relationnet', 'relationnet_softmax', 'maml', 'maml_approx']:
+    elif params.method in ['protonet','matchingnet','relationnet', 'relationnet_softmax', 'maml', 'maml_approx']:
         n_query = max(1, int(params.n_query * params.test_n_way/params.train_n_way)) #if test_n_way is smaller than train_n_way, reduce n_query to keep batch size small
-  
+ 
         train_few_shot_params    = dict(n_way = params.train_n_way, n_support = params.n_shot, \
                                         jigsaw=params.jigsaw, lbda=params.lbda, rotation=params.rotation) 
         base_datamgr            = SetDataManager(image_size, n_query = n_query,  **train_few_shot_params, isAircraft=isAircraft)
         base_loader             = base_datamgr.get_data_loader( base_file , aug = params.train_aug )
-        
-        base_loader1            = copy.deepcopy(base_loader)
-        images = torch.empty(0, 3, 224, 224)    ### [total_images, 3, 224, 224]
-        for i, inputs in enumerate(base_loader1):
-            print(i)
-            x = inputs[0] ### [5,21,3,224,224]
-            x = x.view(105, *x.size()[2:]) ### [105,3,224,224]
-            # print(x.size())
-            images = torch.cat([images, x], dim=0)
-            
-        print(len(images))
-        dataset = JigsawDataset(images)
-        len_dataset = len(images)
-        image_loader = torch.utils.data.DataLoader(dataset, shuffle=False, batch_size=105, num_workers=32)
-        
-            
          
         test_few_shot_params     = dict(n_way = params.test_n_way, n_support = params.n_shot, \
                                         jigsaw=params.jigsaw, lbda=params.lbda, rotation=params.rotation) 
         val_datamgr             = SetDataManager(image_size, n_query = n_query, **test_few_shot_params, isAircraft=isAircraft)
         val_loader              = val_datamgr.get_data_loader( val_file, aug = False) 
-        
+
         if params.method == 'protonet':
-            model           = ProtoNet( model_dict[params.model], **train_few_shot_params, use_bn=(not params.no_bn), pretrain=params.pretrain, image_loader=image_loader, len_dataset=len_dataset)
+            model           = ProtoNet( model_dict[params.model], ortho_loss=params.ortho_loss, ortho_factor=params.ortho_factor, **train_few_shot_params, use_bn=(not params.no_bn), pretrain=params.pretrain)
         elif params.method == 'matchingnet':
             model           = MatchingNet( model_dict[params.model], **train_few_shot_params )
         elif params.method in ['relationnet', 'relationnet_softmax']:
@@ -317,7 +294,7 @@ if __name__=='__main__':
         save_features(model, data_loader, outfile)
 
         ### from test.py ###
-        from test import feature_evaluation
+        from test_ortho import feature_evaluation
         novel_file = os.path.join( checkpoint_dir.replace("checkpoints","features"), split_str +".hdf5") #defaut split = novel, but you can also test base or val classes
         print('load novel file from:',novel_file)
         import data.feature_loader as feat_loader

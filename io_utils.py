@@ -53,7 +53,7 @@ def parse_args(script):
     
     parser.add_argument('--base'     , default='base',              help='name of the json file of the base set')
     parser.add_argument('--base_unlabel'     , default='base',      help='name of the json file of the base set for unlabeled dataset dataloader')
-    parser.add_argument('--ortho_loss'     , default='False',      help='false/weights/ortho_weights/snapped/closest')
+    parser.add_argument('--ortho_loss'     , default='False',      help='false/weights/ortho_weights/snapped/srip/closest')
 
 
     if script == 'train':
