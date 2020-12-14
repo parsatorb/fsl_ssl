@@ -19,6 +19,7 @@ from methods.protonet import ProtoNet
 from methods.matchingnet import MatchingNet
 from methods.relationnet import RelationNet
 from methods.maml import MAML
+from methods.method_utils import closest_ortho_regularizer
 from io_utils import model_dict, parse_args, get_resume_file, get_best_file , get_assigned_file
 
 def feature_evaluation(cl_data_file, model, n_way = 5, n_support = 5, n_query = 15, adaptation = False):
@@ -93,7 +94,7 @@ if __name__ == '__main__':
     model = model.cuda()
     model.feature = model.feature.cuda()
 
-    if params.json_seed is not None:
+    if hasattr(params, "json_seed") and params.json_seed is not None:
         checkpoint_dir = 'checkpoints/%s_%s/%s_%s_%s' %(params.dataset, params.json_seed, params.date, params.model, params.method)
     else:
         checkpoint_dir = 'checkpoints/%s/%s_%s_%s' %(params.dataset, params.date, params.model, params.method)
@@ -102,7 +103,7 @@ if __name__ == '__main__':
     if not params.method in ['baseline', 'baseline++'] :
         checkpoint_dir += '_%dway_%dshot_%dquery' %( params.train_n_way, params.n_shot, params.n_query)
 
-    checkpoint_dir += '_%d'%params.image_size
+    #checkpoint_dir += '_%d'%params.image_size
 
     ## Use another dataset (dataloader) for unlabeled data
     if params.dataset_unlabel is not None:
@@ -148,6 +149,9 @@ if __name__ == '__main__':
                     state.pop(key)
             model.feature.load_state_dict(tmp['state'], strict=False)
         print('modelfile:',modelfile)
+        
+    if params.ortho_loss == "snapped":
+        closest_ortho_regularizer(model, None, None, True)
 
     split = params.split
     if params.save_iter != -1:
